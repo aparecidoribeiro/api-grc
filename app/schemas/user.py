@@ -18,7 +18,7 @@ class UserResponse(BaseModel):
     role: str
     family_id: str
 
-class FamilyCreate():
+class FamilyCreate(BaseModel):
     production_type: str
     members_count: int
 
