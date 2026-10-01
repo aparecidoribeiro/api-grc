@@ -10,5 +10,6 @@ client = AsyncMongoClient(mongo_url)
 
 db = client["bancogrc"]
 
+#Collection
 users_collection = db["users"]
 families_collection = db["family"]
