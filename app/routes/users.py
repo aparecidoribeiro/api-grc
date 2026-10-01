@@ -16,6 +16,7 @@ router = APIRouter(
     "/",
     status_code=201
     )
+    
 async def create_user(data: UserWithFamilyCreate):
 
     verify_user = await users_collection.find_one({

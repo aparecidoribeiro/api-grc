@@ -25,3 +25,7 @@ class FamilyCreate(BaseModel):
 class UserWithFamilyCreate(BaseModel):
     user: UserCreate
     family: FamilyCreate
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
