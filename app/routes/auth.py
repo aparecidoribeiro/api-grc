@@ -3,6 +3,8 @@ from app.schemas.user import LoginRequest
 from app.utils.security import verify_password
 from app.database.conection import users_collection
 
+from app.utils.jwt import create_token
+
 
 router = APIRouter(
     prefix="/auth",
@@ -35,7 +37,17 @@ async def login(data: LoginRequest):
             status_code=401,
             detail="E-mail ou senha inválidos"
         )
+    
+    #Cria token de acesso
+    acess_token = create_token({
+        "sub": str(user["_id"]),
+        "role": user["role"],
+        "family_id" : str(user["family_id"])
+        })    
 
-    return {"message": "Usuário logado com sucesso"}
+    return {
+        "token": acess_token,
+        "message": "Usuário logado com sucesso"
+    }
 
 
