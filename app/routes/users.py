@@ -2,20 +2,21 @@ from fastapi import APIRouter, HTTPException
 from datetime import datetime
 
 from app.utils.security import hash_password
-from app.database.conection import users_collection, families_collection
-from app.schemas.user import UserWithFamilyCreate, UserResponse
+from app.schemas.user import UserWithFamilyCreate, UserResponse, AdminCreate
 from app.database.conection import client
 from fastapi import Depends
 from app.dependencies import get_current_user
+# Minhas coleções | MongoDB
+from app.database.conection import users_collection, families_collection
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"], 
 )
 
-#Cria usuário
+#Cria usuário | role = user
 @router.post(
-    "/create",
+    "/",
     status_code=201
     ) 
 async def create_user(data: UserWithFamilyCreate):
@@ -72,9 +73,46 @@ async def create_user(data: UserWithFamilyCreate):
             detail= "Erro ao criar o usuário"
             )
 
-@router.get(
-    "/me"
+#Cria usuário | role = admin
+@router.post(
+    "/admin",
+    status_code=201
 )
+async def create_admin(data: AdminCreate):
+    verify_user = await users_collection.find_one({
+        "email": data.email
+    })
 
-async def get_me(current_user: dict = Depends(get_current_user)):
-    return {"message": "Usuário Autenticado"}
+    if verify_user:
+        raise HTTPException(
+            status_code=409,
+            detail="Error: Já existe um usuário com esse email"
+        )
+
+    try:
+        hashed_password = hash_password(data.password)
+
+        admin = {
+            "name": data.name,
+            "email": data.email,
+            "password": hashed_password,
+            "role": "admin"
+        }
+
+        admin_result = await users_collection.insert_one(admin)
+
+        return {
+            "message": "Usuário criado com sucesso"
+        }
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao criar usuário"
+        )
+
+
+@router.post(
+    "/family"
+)
+async def create_family(current_user: dict = Depends(get_current_user)):
+    return current_user
