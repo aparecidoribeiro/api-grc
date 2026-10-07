@@ -2,6 +2,7 @@ import jwt
 import os
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
+from fastapi import HTTPException   
 
 load_dotenv()
 
@@ -21,3 +22,22 @@ def create_token(data:dict):
             SECRET_KEY,
             ALGHORITHM
         )    
+
+def verify_token(token: str):
+
+    try:
+        return jwt.decode(
+        token,
+        SECRET_KEY,
+        ALGHORITHM
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=401,
+            detail="Token expirado"
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=401,
+            detail="Token inválido"
+        )

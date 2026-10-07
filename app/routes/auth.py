@@ -5,7 +5,6 @@ from app.database.conection import users_collection
 
 from app.utils.jwt import create_token
 
-
 router = APIRouter(
     prefix="/auth",
     tags=["Auth"]
@@ -46,8 +45,9 @@ async def login(data: LoginRequest):
         })    
 
     return {
-        "token": acess_token,
-        "message": "Usuário logado com sucesso"
-    }
+        "message": "Usuário logado com sucesso",
+        "access_token": acess_token,
+        "token_type": "bearer"
+        }
 
 

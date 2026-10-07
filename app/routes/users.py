@@ -5,18 +5,19 @@ from app.utils.security import hash_password
 from app.database.conection import users_collection, families_collection
 from app.schemas.user import UserWithFamilyCreate, UserResponse
 from app.database.conection import client
+from fastapi import Depends
+from app.dependencies import get_current_user
 
 router = APIRouter(
     prefix="/users",
-    tags=["Users"]
+    tags=["Users"], 
 )
 
 #Cria usuário
 @router.post(
-    "/",
+    "/create",
     status_code=201
-    )
-    
+    ) 
 async def create_user(data: UserWithFamilyCreate):
 
     verify_user = await users_collection.find_one({
@@ -70,3 +71,10 @@ async def create_user(data: UserWithFamilyCreate):
             status_code=500,
             detail= "Erro ao criar o usuário"
             )
+
+@router.get(
+    "/me"
+)
+
+async def get_me(current_user: dict = Depends(get_current_user)):
+    return {"message": "Usuário Autenticado"}
