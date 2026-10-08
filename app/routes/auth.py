@@ -19,23 +19,23 @@ async def login(data: LoginRequest):
         "email": data.email
     })
 
-    # if not user:
-    #     raise HTTPException(
-    #         status_code=401,
-    #         detail="E-mail ou senha inválidos"
-    #     )
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="E-mail ou senha inválidos"
+        )
     
-    # #Compara as senhas
-    # password_is_correct = verify_password(
-    #     data.password,
-    #     user["password"]
-    # )
+    #Compara as senhas
+    password_is_correct = verify_password(
+        data.password,
+        user["password"]
+    )
 
-    # if not password_is_correct:
-    #     raise HTTPException(
-    #         status_code=401,
-    #         detail="E-mail ou senha inválidos"
-    #     )
+    if not password_is_correct:
+        raise HTTPException(
+            status_code=401,
+            detail="E-mail ou senha inválidos"
+        )
     
     #Cria token de acesso
     token_data = {
