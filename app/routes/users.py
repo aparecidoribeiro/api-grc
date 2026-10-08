@@ -1,11 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 
 from app.utils.security import hash_password
 from app.schemas.user import UserWithFamilyCreate, UserResponse, AdminCreate
 from app.database.conection import client
-from fastapi import Depends
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_current_admin
 # Minhas coleções | MongoDB
 from app.database.conection import users_collection, families_collection
 
@@ -19,7 +18,10 @@ router = APIRouter(
     "/",
     status_code=201
     ) 
-async def create_user(data: UserWithFamilyCreate):
+async def create_user(
+    data: UserWithFamilyCreate,
+    current_admin: dict = Depends(get_current_admin)
+    ):
 
     verify_user = await users_collection.find_one({
         "$or": [
@@ -39,7 +41,7 @@ async def create_user(data: UserWithFamilyCreate):
             async with await session.start_transaction():
                 family = {
                     "production_type": data.family.production_type,
-                    "members_count": data.family.members_count,
+                    "members_count": 1,
                     "members": []
                 }
 
@@ -71,7 +73,7 @@ async def create_user(data: UserWithFamilyCreate):
                     {
                         "$push": {
                             "members": {
-                                "user_id": user_id,
+                                "_id": user_id,
                                 "name": data.user.name,
                                 "cpf": data.user.cpf,
                                 "birth_date": data.user.birth_date.isoformat(),
@@ -128,10 +130,3 @@ async def create_admin(data: AdminCreate):
             status_code=500,
             detail="Erro ao criar usuário"
         )
-
-
-@router.post(
-    "/family"
-)
-async def create_family(current_user: dict = Depends(get_current_user)):
-    return current_user

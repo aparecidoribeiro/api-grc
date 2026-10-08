@@ -18,9 +18,13 @@ class UserResponse(BaseModel):
     role: str
     family_id: str
 
+class AdminCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+
 class FamilyCreate(BaseModel):
     production_type: str
-    members_count: int
 
 class UserWithFamilyCreate(BaseModel):
     user: UserCreate
@@ -30,7 +34,10 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-class AdminCreate(BaseModel):
+class MemberCreate(BaseModel):
     name: str
-    email: str
-    password: str
+    cpf: str
+    birth_date: date
+    relationship: str
+
+
