@@ -45,7 +45,7 @@ async def create_user(data: UserWithFamilyCreate):
 
                 family_result = await families_collection.insert_one(family, session=session)
 
-                #ID fa família criada
+                #ID da família criada
                 family_id = family_result.inserted_id
 
                 hashed_password = hash_password(data.user.password)
@@ -62,6 +62,25 @@ async def create_user(data: UserWithFamilyCreate):
                 }
 
                 user_result = await users_collection.insert_one(user, session=session)
+
+                #ID do usuário criado
+                user_id = user_result.inserted_id
+                
+                await families_collection.update_one(
+                    {"_id": family_id}, 
+                    {
+                        "$push": {
+                            "members": {
+                                "user_id": user_id,
+                                "name": data.user.name,
+                                "cpf": data.user.cpf,
+                                "birth_date": data.user.birth_date.isoformat(),
+                                "relationship": "responsável"
+                            }
+                        }
+                    }, 
+                    session=session
+                    )
 
                 return {
                     "message": "Usuário Criado com sucesso"
