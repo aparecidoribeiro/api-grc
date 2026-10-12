@@ -35,9 +35,11 @@ class LoginRequest(BaseModel):
     password: str
 
 class MemberCreate(BaseModel):
-    name: str
-    cpf: str
-    birth_date: date
-    relationship: str
+    name: str | None = None
+    cpf: str | None = None
+    birth_date: date | None
+    relationship: str | None = None
+    phone: str | None = None
+    email: str | None = None
 
 

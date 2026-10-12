@@ -77,7 +77,7 @@ async def create_user(
                                 "name": data.user.name,
                                 "cpf": data.user.cpf,
                                 "birth_date": data.user.birth_date.isoformat(),
-                                "relationship": "responsável"
+                                "relationship": "admin"
                             }
                         }
                     }, 

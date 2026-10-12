@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.dependencies import get_current_admin, get_current_user
 from app.schemas.user import MemberCreate as Member
-from app.database.conection import families_collection
+from app.database.conection import families_collection, users_collection
 from bson import ObjectId
+
+from app.database.conection import client
 
 router = APIRouter(
     prefix="/families",
@@ -66,7 +68,7 @@ async def create_member(family_id: str, data: Member):
         )
 
 
-#Pegas todas as familias
+#Pega todas as familias
 @router.get(
     "/",
     dependencies=[Depends(get_current_admin)]
@@ -117,9 +119,103 @@ async def get_family(family_id: str):
 
         return family
 
-    except Exception as e:
-        print(e)
+    except Exception:
         raise HTTPException(
             status_code=500,
             detail="Erro ao buscar família"
         )
+
+
+#Atualizar membro
+@router.put(
+    "/{family_id}/members/{member_id}",
+    dependencies=[Depends(get_current_admin)]
+    )
+async def update_member(family_id: str, member_id: str, data: Member):
+    try:
+        family = await families_collection.find_one({
+            "_id": ObjectId(family_id),
+            "members._id": ObjectId(member_id)
+            })
+        
+        if not family:
+            raise HTTPException(
+                status_code=404,
+                detail="Família ou membro não encontrado"
+            )
+        # Verifica se o user é o responsável
+        def verify_relationship(family: dict, member_id: str):
+            for member in family["members"]:
+                if str(member["_id"]) == member_id:
+                    return member["relationship"] == "admin"
+            
+            return False
+            
+        #Se não for o admin da família
+        if not verify_relationship(family, member_id):
+            update = await families_collection.update_one(
+                {"_id": ObjectId(family_id),
+                "members._id": ObjectId(member_id)},
+                {
+                    "$set": {
+                        "members.$.name": data.name,
+                        "members.$.cpf": data.cpf,
+                        "members.$.birth_date": data.birth_date.isoformat(),
+                        "members.$.relationship": data.relationship,
+                    }
+                }    
+            )
+
+            return {
+                "message": "Membro atualizado com sucesso"
+            }
+       
+        #Se for o admin da família
+        else:
+
+            async with client.start_session() as session:
+                async with await session.start_transaction():
+
+                    await families_collection.update_one(
+                        {"_id": ObjectId(family_id),
+                        "members._id": ObjectId(member_id)},
+                        {
+                            "$set": {
+                                "members.$.name": data.name,
+                                "members.$.cpf": data.cpf,
+                                "members.$.birth_date": data.birth_date.isoformat(),
+                                "members.$.relationship": data.relationship,
+                            }
+                        },
+                        session=session
+                    )
+
+                    await users_collection.update_one(
+                        {
+                            "_id": ObjectId(member_id)
+                        },
+                        {
+                            "$set": {
+                                "name": data.name,
+                                "cpf": data.cpf,
+                                "birth_date": data.birth_date.isoformat(),
+                                "phone": data.phone,
+                                "email": data.email
+                            }
+                        },
+                        session=session
+                    )
+
+            return {
+                "message": "Membro atualizado com sucesso"
+                }
+
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao editar membro"
+        )
+
+
