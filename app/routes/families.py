@@ -183,8 +183,7 @@ async def update_member(family_id: str, member_id: str, data: Member):
                             "$set": {
                                 "members.$.name": data.name,
                                 "members.$.cpf": data.cpf,
-                                "members.$.birth_date": data.birth_date.isoformat(),
-                                "members.$.relationship": data.relationship,
+                                "members.$.birth_date": data.birth_date.isoformat()
                             }
                         },
                         session=session
@@ -211,11 +210,74 @@ async def update_member(family_id: str, member_id: str, data: Member):
                 }
 
 
-    except Exception as e:
-        print(e)
+    except Exception:
         raise HTTPException(
             status_code=500,
             detail="Erro ao editar membro"
         )
 
 
+@router.delete(
+    "/{family_id}/members/{member_id}"
+)
+async def delete_member(
+    family_id: str,
+    member_id: str,
+    dependencies=[Depends(get_current_admin)]
+    ):
+    
+    try:
+        family = await families_collection.find_one(
+            {
+                "_id": ObjectId(family_id),
+                "members._id": ObjectId(member_id)
+            }
+        )
+
+        if not family:
+            raise HTTPException(
+                status_code=404, 
+                detail="Família ou membro não encontrado"
+            )
+
+        def verify_admin():
+            for member in family["members"]: 
+                if str(member["_id"]) == member_id and member["relationship"] == "admin":
+                    return True
+            
+            return False
+
+        if verify_admin():
+            raise HTTPException(
+                status_code=403,
+                detail="Não é permitido deletar o responsável da família"
+            )
+
+        await families_collection.update_one(
+            {
+                "_id": ObjectId(family_id)
+            }, 
+            {
+                "$pull": {
+                    "members": {
+                        "_id": ObjectId(member_id)
+                        }
+                    },
+                "$inc": {
+                    "members_count": -1
+                }
+            }
+            )
+        return {
+            "message": "Membro deletado com sucesso"
+        }
+
+    except HTTPException: 
+        raise
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao deletar membro"
+        )

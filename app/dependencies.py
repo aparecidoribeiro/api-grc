@@ -6,7 +6,7 @@ oauth = OAuth2PasswordBearer(
     tokenUrl="/auth/login"
 )
 
-#Verica se o token é valido
+#Verifica se o token é valido
 async def get_current_user(token: str = Depends(oauth)):
     payload = verify_token(token)
 
