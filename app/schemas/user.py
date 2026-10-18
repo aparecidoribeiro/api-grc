@@ -46,13 +46,13 @@ class MemberCreate(BaseModel):
 class InventoryCreate(BaseModel):
     name: str
     category: Literal["insumo", "ferramenta", "máquina"]
-    quantity: float | None = Field(default=None, ge=0)
+    quantity: float = Field(default=1, ge=1)
     unit: str = "unidade"
     description: str | None = None
 
 class InventoryUpdate(BaseModel):
     name: str | None = None
     category: Literal["insumo", "ferramenta", "máquina"] | None = None
-    quantity: float | None = Field(default=None, ge=0)
+    quantity: float | None = Field(default=None, ge=1)
     unit: str | None = None
     description: str | None = None
