@@ -44,3 +44,28 @@ async def create_inventory(data: InventoryCreate):
             status_code=500,
             detail="Erro ao adicionar item ao inventário"
         )
+
+
+@router.get(
+    "/"
+)
+async def get_inventory():
+
+    try:
+        inventory = await inventory_collection.find().to_list(length=None)
+        if not inventory:
+            raise HTTPException(
+                status_code=200,
+                detail="Não possui nenhum item no inventário"
+            )
+
+        for item in inventory:
+            item["_id"] = str(item["_id"])
+
+        return inventory
+    
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao buscar itens do inventário"
+        )
