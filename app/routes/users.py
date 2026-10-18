@@ -16,12 +16,9 @@ router = APIRouter(
 #Cria usuário | role = user
 @router.post(
     "/",
-    status_code=201
+    dependencies=[Depends(get_current_admin)]
     ) 
-async def create_user(
-    data: UserWithFamilyCreate,
-    current_admin: dict = Depends(get_current_admin)
-    ):
+async def create_user(data: UserWithFamilyCreate):
 
     verify_user = await users_collection.find_one({
         "$or": [

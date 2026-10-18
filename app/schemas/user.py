@@ -1,5 +1,6 @@
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 
 class UserCreate(BaseModel):
     name: str
@@ -42,4 +43,16 @@ class MemberCreate(BaseModel):
     phone: str | None = None
     email: str | None = None
 
+class InventoryCreate(BaseModel):
+    name: str
+    category: Literal["insumo", "ferramenta", "máquina"]
+    quantity: float | None = Field(default=None, ge=0)
+    unit: str = "unidade"
+    description: str | None = None
 
+class InventoryUpdate(BaseModel):
+    name: str | None = None
+    category: Literal["insumo", "ferramenta", "máquina"] | None = None
+    quantity: float | None = Field(default=None, ge=0)
+    unit: str | None = None
+    description: str | None = None

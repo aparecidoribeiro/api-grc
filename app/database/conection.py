@@ -13,3 +13,4 @@ db = client["bancogrc"]
 #Collection
 users_collection = db["users"]
 families_collection = db["family"]
+inventory_collection = db["inventory"]
