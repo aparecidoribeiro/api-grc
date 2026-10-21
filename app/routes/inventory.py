@@ -104,6 +104,7 @@ async def delete_inventory(item_id: str):
             detail="Erro ao deletar item"
         )
 
+
 @router.patch(
     "/{item_id}",
     dependencies=[Depends(get_current_admin)]
