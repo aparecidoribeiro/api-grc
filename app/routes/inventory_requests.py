@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from app.database.conection import inventory_collection, inventory_request_collection, users_collection
 from app.schemas.inventory_request import InventoryRequest
 
+from app.database.conection import client
+
 from app.dependencies import get_current_user, get_current_admin
 
 router = APIRouter(
@@ -131,4 +133,92 @@ async def get_inventory():
         raise HTTPException(
             status_code=500,
             detail="Erro ao buscar solicitações no inventário"
+        )
+        
+        
+@router.patch(
+    "/{request_id}/approve",
+    dependencies=[Depends(get_current_admin)]
+)
+async def approve_inventory(request_id: str):
+    request = await inventory_request_collection.find_one({"_id": ObjectId(request_id)})
+    
+    if not request:
+        raise HTTPException(
+            status_code=404,
+            detail="Erro essa solicitação não existe"
+        )
+        
+    item = await inventory_collection.find_one({"_id": request["item_id"]})
+    
+    if not item:
+        raise HTTPException(
+            status_code=404,
+            detail="Erro item não encontrado no inventário"
+        )
+        
+    if item["quantity"] > request["quantity"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Erro, quantidade solicitada é maior que a disponível"
+        )
+    
+    try:
+        
+        async with client.start_session() as session:
+            async with await session.start_transaction():
+                
+                if request["category"] == "insumo":
+                    await inventory_request_collection.update_one(
+                        {"_id": ObjectId(request_id)},
+                        {
+                            "$set": {
+                                "status": "approved"
+                            }
+                        },
+                        session=session
+                    )
+                    
+                    await inventory_collection.update_one(
+                        {"_id": item["_id"]},
+                        {
+                            "$inc": {"quantity": -request["quantity"]}
+                        },
+                        session=session
+                    )
+                    
+                
+                else:        
+                    await inventory_request_collection.update_one(
+                        {"_id": ObjectId(request_id)},
+                        {
+                            "$set": {
+                                "status": "approved",
+                                "picked_up_at": datetime.now(timezone.utc)
+                            }
+                        },
+                        session=session
+                    )
+                    
+                    await inventory_collection.update_one(
+                        {"_id": item["_id"]},
+                        {
+                            "$inc": {"quantity": -request["quantity"]}
+                        },
+                        session=session
+                    )
+                    
+                    return {
+                        "message": "Solicitação aprovada com sucesso"
+                    }
+                
+                return {
+                    "message": "Solicitação aprovada com sucesso"
+                }
+        
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao aprovar solicitação"
         )
