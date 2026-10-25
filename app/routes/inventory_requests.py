@@ -116,7 +116,11 @@ async def get_request():
                 "quantidade": request["quantity"],
                 "status": request["status"],
                 "created_at": request["created_at"].strftime("%d/%m/%Y"),
-                "expected_return_date": datetime.fromisoformat(request["expected_return_date"]).strftime("%d/%m/%Y"),
+                "expected_return_date": (
+                    datetime.fromisoformat(request["expected_return_date"]).strftime("%d/%m/%Y")
+                    if request["expected_return_date"]
+                    else None
+                ),
                 "requested_by": str(request["requested_by"]),
                 "family_id": str(request["family_id"]),
                 "family_admin": {
@@ -229,3 +233,44 @@ async def approve_request(request_id: str):
         )
 
 
+
+@router.patch(
+    "/{request_id}/reject",
+    dependencies=[Depends(get_current_admin)]
+)
+async def reject_request(request_id: str):
+    request = await inventory_request_collection.find_one({"_id": ObjectId(request_id)})
+
+    if not request:
+        raise HTTPException(
+            status_code=404,
+            detail="Erro essa solicitação não existe"
+        )
+
+    try:                
+        await inventory_request_collection.update_one(
+            {"_id": ObjectId(request_id)},
+            {
+                "$set": {
+                    "status": "reject"
+                }
+            }
+        )
+        
+        await create_notification(
+            user_id=request["requested_by"],
+            request_id=request["_id"],
+            title="Solicitação rejeitada",
+            message=f"Sua solicitação do item {request["name"]} foi rejeitada."
+        )
+        
+        return {
+            "message": "Solicitação rejeitada com sucesso"
+        }
+        
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao rejeitar solicitação"
+        )
