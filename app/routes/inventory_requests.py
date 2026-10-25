@@ -7,6 +7,7 @@ from app.database.conection import inventory_collection, inventory_request_colle
 from app.schemas.inventory_request import InventoryRequest
 
 from app.database.conection import client
+from app.utils.others import create_notification
 
 from app.dependencies import get_current_user, get_current_admin
 
@@ -18,7 +19,7 @@ router = APIRouter(
 @router.post(
     "/"
 )
-async def request_inventory(
+async def create_request(
     request: InventoryRequest,
     user: dict = Depends(get_current_user)
     ):
@@ -91,7 +92,7 @@ async def request_inventory(
     "/",
     dependencies=[Depends(get_current_admin)]
 )
-async def get_inventory():
+async def get_request():
     try:
         #Busca requisições no inventário
         result = await inventory_request_collection.find({"status": "pending"}).to_list(length=None)
@@ -114,7 +115,8 @@ async def get_inventory():
                 "item_name": request["name"],
                 "quantidade": request["quantity"],
                 "status": request["status"],
-                "expected_return_date": request["expected_return_date"],
+                "created_at": request["created_at"].strftime("%d/%m/%Y"),
+                "expected_return_date": datetime.fromisoformat(request["expected_return_date"]).strftime("%d/%m/%Y"),
                 "requested_by": str(request["requested_by"]),
                 "family_id": str(request["family_id"]),
                 "family_admin": {
@@ -140,7 +142,7 @@ async def get_inventory():
     "/{request_id}/approve",
     dependencies=[Depends(get_current_admin)]
 )
-async def approve_inventory(request_id: str):
+async def approve_request(request_id: str):
     request = await inventory_request_collection.find_one({"_id": ObjectId(request_id)})
     
     if not request:
@@ -157,7 +159,7 @@ async def approve_inventory(request_id: str):
             detail="Erro item não encontrado no inventário"
         )
         
-    if item["quantity"] > request["quantity"]:
+    if item["quantity"] < request["quantity"]:
         raise HTTPException(
             status_code=400,
             detail="Erro, quantidade solicitada é maior que a disponível"
@@ -207,11 +209,14 @@ async def approve_inventory(request_id: str):
                         },
                         session=session
                     )
-                    
-                    return {
-                        "message": "Solicitação aprovada com sucesso"
-                    }
                 
+                await create_notification(
+                    user_id=request["requested_by"],
+                    request_id=request["_id"],
+                    title="Solicitação aprovada",
+                    message=f"Sua solicitação do item {request["name"]} foi aprovada. Aguardando retirada."
+                )
+
                 return {
                     "message": "Solicitação aprovada com sucesso"
                 }
@@ -222,3 +227,5 @@ async def approve_inventory(request_id: str):
             status_code=500,
             detail="Erro ao aprovar solicitação"
         )
+
+
