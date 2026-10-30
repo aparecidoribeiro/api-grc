@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 
 from datetime import datetime, timezone
+from typing import Literal
 
 from app.database.conection import inventory_collection, inventory_request_collection, users_collection
 from app.schemas.inventory_request import InventoryRequest
@@ -88,6 +89,7 @@ async def create_request(
         )
 
 
+#Buscar todas as solicitações pedentes = admin
 @router.get(
     "/",
     dependencies=[Depends(get_current_admin)]
@@ -140,7 +142,56 @@ async def get_request():
             status_code=500,
             detail="Erro ao buscar solicitações no inventário"
         )
+
+#Pegar todas as solicitações do usuário
+@router.get(
+    "/mine"
+)
+async def get_request_user(
+    user: dict = Depends(get_current_user),
+    status: Literal["pending", "approved", "rejected", "completed"] = "pending"
+    ):
+
+        if user["role"] == "admin": 
+            raise HTTPException(
+                status_code=403,
+                detail="Erro, somente usuários normais podem acessar essa rota"
+            )
+
+        user_id = user["sub"]
+
+        try:
+
+            result = await inventory_request_collection.find({
+                "status": status,
+                "requested_by": ObjectId(user_id)
+                }).to_list(length=None)
+
+            for request in result:
+                request["_id"] = str(request["_id"])
+                request["item_id"] = str(request["item_id"])
+                request["family_id"] = str(request["family_id"])
+                request["requested_by"] = str(request["requested_by"])
+            
+            if not result:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Não existe nenhuma solicitação"
+                )
+
+            return result
         
+        
+        except Exception:
+            raise
+
+        except Exception:
+            raise HTTPException(
+                status_code=500,
+                detail="Erro ao buscar solicitações"
+            )
+
+
         
 @router.patch(
     "/{request_id}/approve",
@@ -252,7 +303,7 @@ async def reject_request(request_id: str):
             {"_id": ObjectId(request_id)},
             {
                 "$set": {
-                    "status": "reject"
+                    "status": "rejected"
                 }
             }
         )
