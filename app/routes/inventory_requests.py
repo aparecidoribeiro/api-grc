@@ -17,6 +17,8 @@ router = APIRouter(
     tags=["Inventory Request"],
 )
 
+data_now = datetime.now(timezone.utc)
+
 @router.post(
     "/"
 )
@@ -47,6 +49,12 @@ async def create_request(
             detail="Erro, quantidade solicitada maior que a disponível"
         )
 
+    if request.category != "insumo" and request.expected_return_date == None:
+        raise HTTPException(
+            status_code=400,
+            detail="Erro precisa ser informado a data de retorno"
+        )
+
     user_id = user["sub"]
     family_id = user["family_id"]
 
@@ -65,14 +73,15 @@ async def create_request(
         "requested_by": ObjectId(user_id),
         "quantity": request.quantity,
         "status": "pending",
-        "created_at": datetime.now(timezone.utc),
+        "created_at": data_now,
         "expected_return_date": (
             request.expected_return_date.isoformat()
             if request.expected_return_date
             else None
         ),
         "picked_up_at": None,
-        "returned_at": None
+        "returned_at": None,
+        "updated_at": data_now
     }
 
     try:
@@ -94,10 +103,12 @@ async def create_request(
     "/",
     dependencies=[Depends(get_current_admin)]
 )
-async def get_request():
+async def get_request(
+    status: Literal["pending", "approved", "rejected", "borrowed", "completed"] = "pending"
+):
     try:
         #Busca requisições no inventário
-        result = await inventory_request_collection.find({"status": "pending"}).to_list(length=None)
+        result = await inventory_request_collection.find({"status": status}).to_list(length=None)
 
         if not result:
             raise HTTPException(
@@ -123,6 +134,7 @@ async def get_request():
                     if request["expected_return_date"]
                     else None
                 ),
+                "updated_at": request["updated_at"].strftime("%d/%m/%Y"),
                 "requested_by": str(request["requested_by"]),
                 "family_id": str(request["family_id"]),
                 "family_admin": {
@@ -149,7 +161,7 @@ async def get_request():
 )
 async def get_request_user(
     user: dict = Depends(get_current_user),
-    status: Literal["pending", "approved", "rejected", "completed"] = "pending"
+    status: Literal["pending", "approved", "rejected", "borrowed", "completed"] = "pending"
     ):
 
         if user["role"] == "admin": 
@@ -230,7 +242,8 @@ async def approve_request(request_id: str):
                         {"_id": ObjectId(request_id)},
                         {
                             "$set": {
-                                "status": "approved"
+                                "status": "approved",
+                                "updated_at": data_now
                             }
                         },
                         session=session
@@ -251,7 +264,7 @@ async def approve_request(request_id: str):
                         {
                             "$set": {
                                 "status": "approved",
-                                "picked_up_at": datetime.now(timezone.utc)
+                                "updated_at": data_now
                             }
                         },
                         session=session
@@ -324,4 +337,51 @@ async def reject_request(request_id: str):
         raise HTTPException(
             status_code=500,
             detail="Erro ao rejeitar solicitação"
+        )
+
+@router.patch(
+    "/{request_id}/pickup",
+    dependencies=[Depends(get_current_admin)]
+)
+async def pickup_request(request_id: str):
+
+    request = await inventory_request_collection.find_one({"_id": ObjectId(request_id)})
+
+    if request["status"] != "approved":
+        raise HTTPException(
+            status_code=400,
+            detail="Erro essa solicitação não está com status de aprovada"
+        )
+
+    try:
+
+        result = await inventory_request_collection.update_one(
+            {"_id": ObjectId(request_id)},
+            {
+                "$set": {
+                    "status": "borrowed",
+                    "picked_up_at": data_now,
+                    "updated_at": data_now
+                }
+            }
+        )
+
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="Erro essa solicitação não existe"
+            )
+    
+        return {
+            "message": "Solicitação enviada com sucesso"
+        }
+
+    except Exception:
+        raise
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao enviar requisição"
         )
