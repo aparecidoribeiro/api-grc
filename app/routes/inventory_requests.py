@@ -332,23 +332,43 @@ async def pickup_request(request_id: str):
 
     try:
 
-        result = await inventory_request_collection.update_one(
-            {"_id": ObjectId(request_id)},
-            {
-                "$set": {
-                    "status": "borrowed",
-                    "picked_up_at": data_now,
-                    "updated_at": data_now
+        if request["category"] == "insumo":
+            result = await inventory_request_collection.update_one(
+                {"_id": ObjectId(request_id)},
+                {
+                    "$set": {
+                        "status": "completed",
+                        "picked_up_at": data_now,
+                        "updated_at": data_now
+                    }
                 }
-            }
-        )
-
-        if result.matched_count == 0:
-            raise HTTPException(
-                status_code=404,
-                detail="Erro essa solicitação não existe"
             )
-    
+
+            if result.matched_count == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Erro essa solicitação não existe"
+            )
+        
+        else:
+            result = await inventory_request_collection.update_one(
+                {"_id": ObjectId(request_id)},
+                {
+                    "$set": {
+                        "status": "borrowed",
+                        "picked_up_at": data_now,
+                        "updated_at": data_now
+                    }
+                }
+            )
+
+            if result.matched_count == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Erro essa solicitação não existe"
+            )
+
+
         return {
             "message": "Solicitação enviada com sucesso"
         }
@@ -362,5 +382,4 @@ async def pickup_request(request_id: str):
             status_code=500,
             detail="Erro ao enviar requisição"
         )
-
 
