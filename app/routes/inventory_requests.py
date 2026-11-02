@@ -203,8 +203,7 @@ async def get_request_user(
                 detail="Erro ao buscar solicitações"
             )
 
-
-        
+#Rota de aprovar solicitação
 @router.patch(
     "/{request_id}/approve",
     dependencies=[Depends(get_current_admin)]
@@ -237,46 +236,24 @@ async def approve_request(request_id: str):
         async with client.start_session() as session:
             async with await session.start_transaction():
                 
-                if request["category"] == "insumo":
-                    await inventory_request_collection.update_one(
-                        {"_id": ObjectId(request_id)},
-                        {
-                            "$set": {
-                                "status": "approved",
-                                "updated_at": data_now
-                            }
-                        },
-                        session=session
-                    )
-                    
-                    await inventory_collection.update_one(
-                        {"_id": item["_id"]},
-                        {
-                            "$inc": {"quantity": -request["quantity"]}
-                        },
-                        session=session
-                    )
-                    
+                await inventory_request_collection.update_one(
+                    {"_id": ObjectId(request_id)},
+                    {
+                        "$set": {
+                            "status": "approved",
+                            "updated_at": data_now
+                        }
+                    },
+                    session=session
+                )
                 
-                else:        
-                    await inventory_request_collection.update_one(
-                        {"_id": ObjectId(request_id)},
-                        {
-                            "$set": {
-                                "status": "approved",
-                                "updated_at": data_now
-                            }
-                        },
-                        session=session
-                    )
-                    
-                    await inventory_collection.update_one(
-                        {"_id": item["_id"]},
-                        {
-                            "$inc": {"quantity": -request["quantity"]}
-                        },
-                        session=session
-                    )
+                await inventory_collection.update_one(
+                    {"_id": item["_id"]},
+                    {
+                        "$inc": {"quantity": -request["quantity"]}
+                    },
+                    session=session
+                )
                 
                 await create_notification(
                     user_id=request["requested_by"],
@@ -296,8 +273,7 @@ async def approve_request(request_id: str):
             detail="Erro ao aprovar solicitação"
         )
 
-
-
+#Rota de rejeitar solicitação
 @router.patch(
     "/{request_id}/reject",
     dependencies=[Depends(get_current_admin)]
@@ -332,13 +308,14 @@ async def reject_request(request_id: str):
             "message": "Solicitação rejeitada com sucesso"
         }
         
-    except Exception as e:
-        print(e)
+    except Exception:
         raise HTTPException(
             status_code=500,
             detail="Erro ao rejeitar solicitação"
         )
 
+
+#Rota de retirada de item
 @router.patch(
     "/{request_id}/pickup",
     dependencies=[Depends(get_current_admin)]
@@ -385,3 +362,5 @@ async def pickup_request(request_id: str):
             status_code=500,
             detail="Erro ao enviar requisição"
         )
+
+
