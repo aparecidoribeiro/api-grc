@@ -320,7 +320,7 @@ async def reject_request(request_id: str):
     "/{request_id}/pickup",
     dependencies=[Depends(get_current_admin)]
 )
-async def pickup_request(request_id: str):
+async def borrow_item(request_id: str):
 
     request = await inventory_request_collection.find_one({"_id": ObjectId(request_id)})
 
@@ -383,3 +383,46 @@ async def pickup_request(request_id: str):
             detail="Erro ao enviar requisição"
         )
 
+#Rota de retorno do item
+@router.patch(
+    "/{request_id}/return",
+    dependencies=[Depends(get_current_admin)]
+)
+async def return_item(request_id: str):
+    
+    request = await inventory_request_collection.find_one({"_id": ObjectId(request_id)})
+
+    if request["status"] != "borrowed":
+        raise HTTPException(
+            status_code=400,
+            detail="Erro essa solicitação não está com status de aprovada"
+        )
+
+    try:
+
+        result = await inventory_request_collection.update_one(
+                {"_id": ObjectId(request_id)},
+                {
+                    "$set": {
+                        "status": "completed",
+                        "returned_at": data_now,
+                        "updated_at": data_now
+                    }
+                }
+            )
+
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="Erro essa solicitação não existe"
+        )
+
+        return {
+            "message": "Solicitação enviada com sucesso"
+        }
+
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao enviar requisição"
+        )
