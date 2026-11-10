@@ -3,7 +3,7 @@ from app.dependencies import get_current_user, get_current_admin
 from bson import ObjectId
 
 from app.database.conection import inventory_collection
-from app.schemas.user import InventoryCreate, InventoryUpdate
+from app.schemas.inventory import InventoryCreate, InventoryUpdate
 
 router = APIRouter(
     prefix="/inventory",

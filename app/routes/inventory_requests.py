@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from app.database.conection import inventory_collection, inventory_request_collection, users_collection
-from app.schemas.inventory_request import InventoryRequest
+from app.schemas.inventory import InventoryRequest
 
 from app.database.conection import client
 from app.utils.others import create_notification

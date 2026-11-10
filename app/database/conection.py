@@ -6,8 +6,8 @@ load_dotenv()
 
 mongo_url = os.getenv("mongo_url")
 
+#Conexão com banco de dados
 client = AsyncMongoClient(mongo_url)
-
 db = client["bancogrc"]
 
 #Collection
@@ -16,3 +16,4 @@ families_collection = db["family"]
 inventory_collection = db["inventory"]
 inventory_request_collection = db["inventory_request"]
 notifications_collection = db["notifications"]
+events_collection = db["events"]

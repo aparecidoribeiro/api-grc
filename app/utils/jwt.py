@@ -10,6 +10,8 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGHORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 1
 
+
+#Cria token JWT
 def create_token(data:dict):
     payload = data.copy()
 
@@ -23,6 +25,7 @@ def create_token(data:dict):
             ALGHORITHM
         )    
 
+#Verifica token JWT
 def verify_token(token: str):
 
     try:

@@ -1,13 +1,17 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, Request
 from app.utils.jwt import verify_token
 
-oauth = OAuth2PasswordBearer(
-    tokenUrl="/auth/login"
-)
-
 #Verifica se o token é valido
-async def get_current_user(token: str = Depends(oauth)):
+async def get_current_user(request: Request):
+
+    token = request.cookies.get("token")
+
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Usuário não autenticado"
+        )
+
     payload = verify_token(token)
 
     return payload
