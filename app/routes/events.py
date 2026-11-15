@@ -55,6 +55,11 @@ async def get_events():
         for event in result:
             event["_id"] = str(event["_id"])
 
+        if len(result) <= 0:
+            return {
+                "message": "Não possui nenhum evento"
+            }
+
         return result
 
     except Exception:
@@ -106,4 +111,30 @@ async def update_event(data: EventUpdate, event_id: str):
         raise HTTPException(
             status_code=500,
             detail="Erro ao editar evento"
+        )
+
+
+@router.delete(
+    "/{event_id}",
+    dependencies=[Depends(get_current_admin)]
+)
+async def delete_event(event_id: str):
+    try:
+
+        result = await events_collection.delete_one({"_id": ObjectId(event_id)})
+
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="Evento não encontrado"
+            )
+
+        return {
+            "message": "Evento deletado com sucesso;"
+        }
+
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao deletar evento"
         )
