@@ -426,3 +426,4 @@ async def return_item(request_id: str):
             status_code=500,
             detail="Erro ao enviar requisição"
         )
+        

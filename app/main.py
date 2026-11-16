@@ -8,6 +8,7 @@ from app.routes.inventory import router as inventory
 from app.routes.inventory_requests import router as inventory_requests
 from app.routes.notifications import router as notifications
 from app.routes.events import router as events
+from app.routes.attendance import router as attendance
 
 
 app = FastAPI()
@@ -28,3 +29,4 @@ app.include_router(inventory)
 app.include_router(inventory_requests)
 app.include_router(notifications)
 app.include_router(events)
+app.include_router(attendance)
