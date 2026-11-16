@@ -17,3 +17,11 @@ class EventUpdate(BaseModel):
     date: type_date | None = None
     start_time: time | None = None
     location: str | None = None
+
+class FamilyAttendance(BaseModel):
+    family_id: str
+    admin_name: str
+    present: bool
+
+class AttendanceUpdate(BaseModel):
+    families: list[FamilyAttendance]

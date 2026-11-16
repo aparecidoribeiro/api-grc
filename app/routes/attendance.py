@@ -2,11 +2,15 @@ from fastapi import APIRouter, HTTPException, Depends
 from bson import ObjectId
 from app.dependencies import get_current_admin
 from app.database.conection import events_collection, attendance_collection, users_collection
+from datetime import datetime, timezone
+from app.schemas.events import AttendanceUpdate
 
 router = APIRouter(
     prefix="/attendance",
     tags=["Attendance"]
 )
+
+date_now = datetime.now(timezone.utc)
 
 @router.get(
     "/{event_id}",
@@ -18,7 +22,7 @@ async def get_attendance(event_id: str):
     if not result_event:
         raise HTTPException(
             status_code=404,
-            detail="Esse evento não existe"
+            detail="Evento não encontrado"
             )
 
     if result_event["type"] == "event":
@@ -39,7 +43,6 @@ async def get_attendance(event_id: str):
             for user in list_user:
                 data_user = {
                     "family_id": str(user["_id"]),
-                    "admin_family": str(user["family_id"]),
                     "admin_name": user["name"],
                     "present": False
                 }
@@ -49,7 +52,9 @@ async def get_attendance(event_id: str):
             await attendance_collection.insert_one(
                 {
                     "event_id": ObjectId(event_id),
-                    "families": families
+                    "families": families,
+                    "created_at": date_now,
+                    "updated_at": date_now
                 }
             )            
 
@@ -63,7 +68,6 @@ async def get_attendance(event_id: str):
 
             for family in result["families"]:
                 family["family_id"] = str(family["family_id"])
-                family["admin_family"] = str(family["admin_family"])
 
             return result
 
@@ -73,3 +77,53 @@ async def get_attendance(event_id: str):
             status_code=500,
             detail="Erro ao criar lista de presença"
         )
+
+
+
+@router.patch(
+    "/{event_id}",
+    dependencies=[Depends(get_current_admin)]
+)
+async def list_attendance(event_id: str, data: AttendanceUpdate):
+
+    result_event = await events_collection.find_one({"_id": ObjectId(event_id)})
+
+    if not result_event:
+        raise HTTPException(
+            status_code=404,
+            detail="Evento não encontrado"
+        )
+
+    if result_event["type"] == "event":
+        raise HTTPException(
+            status_code=400,
+            detail="Esse tipo de evento não precisa de lista de presença"
+        )
+
+    try:
+        
+        for user in data.families:
+            user.family_id = ObjectId(user.family_id)
+
+        families = data.model_dump()["families"]
+
+        await attendance_collection.update_one(
+            {"event_id": ObjectId(event_id)},
+            {
+                "$set": {
+                    "families": families,
+                    "updated_at": date_now
+                }
+            }
+        )      
+
+        return {
+            "message": "Lista de presença salva com sucesso"
+        }
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao salvar lista de presença"
+        )    
